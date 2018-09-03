@@ -1,0 +1,85 @@
+#!/usr/bin/env php
+<?php
+
+use App\Foundation\Application;
+use App\Providers\AppServiceProvider;
+use App\Providers\ConsoleServiceProvider;
+use Phalcon\CLI\Console as ConsoleApp;
+use Phalcon\Config;
+use Phalcon\Di;
+use Phalcon\Di\FactoryDefault\Cli;
+
+/*
+ * Register the autoloader and
+ * tell it to register the tasks directory
+ */
+$loader = require 'bootstrap/autoload.php';
+
+$loader->registerDirs(
+    [
+        ROOT.'/app/Console',
+    ]
+);
+$loader->register();
+
+require APP_PATH.'/console-helpers.php';
+
+/*
+ * Inject dependencies
+ */
+$di = new CLI;
+
+Di::setDefault($di);
+
+/** @var Application $app */
+$app = require ROOT.'/bootstrap/app.php';
+
+$app->setDi();
+
+$di->get('config')
+    ->merge(new Config(
+        require CONFIG_PATH.'/console.php'
+    ));
+
+$app->registerServiceProviders([
+    AppServiceProvider::class,
+    ConsoleServiceProvider::class,
+]);
+
+/*
+ * Create a console application
+ */
+$console = new ConsoleApp();
+$console->setDI($di);
+
+$di->setShared('console', $console);
+
+/**
+ * Process the console arguments
+ */
+$arguments = [];
+foreach ($argv as $k => $arg) {
+    if ($k == 1) {
+        $arguments['task'] = $arg;
+    } elseif ($k == 2) {
+        $arguments['action'] = $arg;
+    } elseif ($k >= 3) {
+        $arguments['params'][] = $arg;
+    }
+}
+
+/*
+ * Define global constants for the current task and action
+ */
+define('CURRENT_TASK', (isset($argv[1]) ? $argv[1] : null));
+define('CURRENT_ACTION', (isset($argv[2]) ? $argv[2] : null));
+
+/*
+ * Handle incoming arguments
+ */
+try {
+    $console->handle($arguments);
+} catch (\Phalcon\Exception $e) {
+    echo $e->getMessage();
+    exit(255);
+}

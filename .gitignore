@@ -1,0 +1,12 @@
+/.idea
+/vendor
+/node_modules
+/public/hot
+/public/js
+/public/css
+/public/fonts
+/public/img
+/public/images
+/public/mix-manifest.json
+/public/storage
+_.php
